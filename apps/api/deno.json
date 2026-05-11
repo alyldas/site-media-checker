@@ -1,0 +1,23 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-env --allow-net dev.ts",
+    "start": "deno run --allow-env --allow-net dev.ts",
+    "test": "deno test --allow-net --allow-env",
+    "lint": "deno lint",
+    "fmt": "deno fmt"
+  },
+  "imports": {
+    "@std/assert": "jsr:@std/assert",
+    "hono": "npm:hono",
+    "zod": "npm:zod"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": [
+      "deno.ns",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "nodeModulesDir": "auto"
+}

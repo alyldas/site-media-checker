@@ -1,0 +1,22 @@
+{
+  "name": "@site-media-checker/core",
+  "version": "1.0.0",
+  "description": "Shared types, scoring and URL helpers for Site Media Checker.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alyldas/site-media-checker.git",
+    "directory": "packages/core"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

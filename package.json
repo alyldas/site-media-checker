@@ -1,0 +1,43 @@
+{
+  "name": "site-media-checker",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Website media metadata validator for favicons, app icons, manifests and social previews.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alyldas/site-media-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/alyldas/site-media-checker/issues"
+  },
+  "homepage": "https://github.com/alyldas/site-media-checker#readme",
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:web",
+    "dev:web": "npm --workspace apps/web run dev --",
+    "dev:api": "cd apps/api && deno task dev",
+    "build": "npm run build:web && npm --workspace packages/core run build",
+    "build:web": "npm --workspace apps/web run build",
+    "check:web": "npm --workspace apps/web run build && npm --workspace apps/web run test",
+    "check:core": "npm --workspace packages/core run typecheck && npm --workspace packages/core run test",
+    "test": "npm --workspace packages/core run test && npm run test:api",
+    "test:api": "cd apps/api && deno task test",
+    "lint": "npm run lint:api",
+    "lint:api": "cd apps/api && deno task lint",
+    "check:api": "cd apps/api && deno check main.ts dev.ts",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "format": "prettier --write . && npm run fmt:api",
+    "fmt:api": "cd apps/api && deno task fmt",
+    "check": "npm run check:web && npm run check:core && npm run lint:api && npm run check:api && npm run test:api"
+  },
+  "devDependencies": {
+    "deno-bin": "^2.2.7",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  }
+}

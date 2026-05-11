@@ -28,9 +28,11 @@ jobs:
       - name: Deploy to Deno Deploy
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
+          DENO_DEPLOY_ORG: ${{ vars.DENO_DEPLOY_ORG }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
           deno deploy create \
+            --org="${DENO_DEPLOY_ORG}" \
             --app="${{ inputs.project }}" \
             --source=local \
             --runtime-mode=dynamic \
@@ -39,11 +41,11 @@ jobs:
             --region=global \
             --no-wait || true
 
-          deno deploy env add ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}" ||
-            deno deploy env update-value ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}"
-          deno deploy env add ALLOW_UNSAFE_DNS_FALLBACK "false" --app="${{ inputs.project }}" ||
-            deno deploy env update-value ALLOW_UNSAFE_DNS_FALLBACK "false" --app="${{ inputs.project }}"
-          deno deploy env add USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --app="${{ inputs.project }}" ||
-            deno deploy env update-value USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --app="${{ inputs.project }}"
+          deno deploy env add ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}" ||
+            deno deploy env update-value ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}"
+          deno deploy env add ALLOW_UNSAFE_DNS_FALLBACK "false" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}" ||
+            deno deploy env update-value ALLOW_UNSAFE_DNS_FALLBACK "false" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}"
+          deno deploy env add USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}" ||
+            deno deploy env update-value USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}"
 
-          deno deploy --app="${{ inputs.project }}" --prod
+          deno deploy --org="${DENO_DEPLOY_ORG}" --app="${{ inputs.project }}" --prod

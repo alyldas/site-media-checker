@@ -121,7 +121,7 @@
 
 .chrome-tabbar > .browser-plus,
 .firefox-tabbar > .browser-plus {
-  transform: translate(-0.12rem, -0.08rem);
+  transform: translate(-0.12rem, 0.02rem);
 }
 
 .chrome-shot.is-dark .chrome-tabbar {
@@ -228,7 +228,7 @@
 
 .safari-round-button::before {
   position: absolute;
-  top: 50%;
+  top: calc(50% + 0.02rem);
   left: 50%;
   content: "+";
   font-size: 1.2rem;

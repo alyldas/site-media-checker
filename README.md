@@ -62,6 +62,7 @@ For local development, `apps/web/.env.example` shows the expected variable.
 The API is designed for Deno Deploy:
 
 - entrypoint: `apps/api/main.ts`
+- manual workflow: `.github/workflows/deploy-api.yml`
 - required permission class: network and environment access
 - recommended production env:
   - `ALLOWED_ORIGINS=https://<your-pages-host>`

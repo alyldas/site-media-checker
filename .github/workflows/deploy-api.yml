@@ -30,10 +30,11 @@ jobs:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
-          deno run -A jsr:@deno/deployctl deploy \
-            --project="${{ inputs.project }}" \
-            --entrypoint=apps/api/main.ts \
-            --prod \
-            --env="ALLOWED_ORIGINS=${ALLOWED_ORIGINS}" \
-            --env="ALLOW_UNSAFE_DNS_FALLBACK=false" \
-            --env="USER_AGENT=SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)"
+          deno deploy env add ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}" ||
+            deno deploy env update-value ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}"
+          deno deploy env add ALLOW_UNSAFE_DNS_FALLBACK "false" --app="${{ inputs.project }}" ||
+            deno deploy env update-value ALLOW_UNSAFE_DNS_FALLBACK "false" --app="${{ inputs.project }}"
+          deno deploy env add USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --app="${{ inputs.project }}" ||
+            deno deploy env update-value USER_AGENT "SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)" --app="${{ inputs.project }}"
+
+          deno deploy --app="${{ inputs.project }}" --prod

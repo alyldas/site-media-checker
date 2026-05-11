@@ -3,6 +3,7 @@ export interface ApiConfig {
   maxHtmlBytes: number;
   maxManifestBytes: number;
   maxAssetBytes: number;
+  maxRequestBytes: number;
   maxAssetsPerScan: number;
   fetchTimeoutMs: number;
   maxRedirects: number;
@@ -21,6 +22,7 @@ export function getConfig(): ApiConfig {
     maxHtmlBytes: readPositiveInteger("MAX_HTML_BYTES", 1_500_000),
     maxManifestBytes: readPositiveInteger("MAX_MANIFEST_BYTES", 262_144),
     maxAssetBytes: readPositiveInteger("MAX_ASSET_BYTES", 4_000_000),
+    maxRequestBytes: readPositiveInteger("MAX_REQUEST_BYTES", 4096),
     maxAssetsPerScan: readPositiveInteger("MAX_ASSETS_PER_SCAN", 30),
     fetchTimeoutMs: readPositiveInteger("FETCH_TIMEOUT_MS", 5_000),
     maxRedirects: readPositiveInteger("MAX_REDIRECTS", 5),

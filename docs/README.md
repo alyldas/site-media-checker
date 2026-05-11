@@ -44,3 +44,7 @@ npm run check
 
 This runs web build/tests, core typecheck/tests, API lint, API typecheck and API
 tests.
+
+## Deployment
+
+See [deployment.md](deployment.md).

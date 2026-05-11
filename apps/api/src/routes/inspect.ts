@@ -27,10 +27,29 @@ inspectRoute.get("/", (c) => {
 });
 
 inspectRoute.post("/", async (c) => {
+  const config = getConfig();
+  const contentLength = Number(c.req.header("content-length") ?? 0);
+
+  if (contentLength > config.maxRequestBytes) {
+    return c.json(
+      errorResponse("request_too_large", "Request body is too large"),
+      413,
+    );
+  }
+
+  const text = await c.req.text();
+
+  if (new TextEncoder().encode(text).byteLength > config.maxRequestBytes) {
+    return c.json(
+      errorResponse("request_too_large", "Request body is too large"),
+      413,
+    );
+  }
+
   let body: unknown;
 
   try {
-    body = await c.req.json();
+    body = JSON.parse(text) as unknown;
   } catch {
     return c.json(
       errorResponse("invalid_json", "Request body must be valid JSON"),

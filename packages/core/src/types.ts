@@ -217,6 +217,7 @@ export type ErrorCode =
   | "fetch_failed"
   | "html_too_large"
   | "response_too_large"
+  | "request_too_large"
   | "too_many_redirects"
   | "invalid_json"
   | "internal_error";

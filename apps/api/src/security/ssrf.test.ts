@@ -7,6 +7,7 @@ const config: ApiConfig = {
   maxHtmlBytes: 1_500_000,
   maxManifestBytes: 262_144,
   maxAssetBytes: 4_000_000,
+  maxRequestBytes: 4096,
   maxAssetsPerScan: 30,
   fetchTimeoutMs: 5_000,
   maxRedirects: 5,

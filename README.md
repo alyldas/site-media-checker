@@ -49,6 +49,28 @@ npm run dev:api
 The API uses Deno. The npm scripts use the project dependency that provides
 `deno`, so `npm run check` works after `npm install`.
 
+## Deployment
+
+The repository includes a GitHub Pages workflow for the frontend:
+
+- `.github/workflows/deploy-web.yml`
+- output: `apps/web/dist`
+
+Set `VITE_API_BASE_URL` in the web build environment when the API is deployed.
+For local development, `apps/web/.env.example` shows the expected variable.
+
+The API is designed for Deno Deploy:
+
+- entrypoint: `apps/api/main.ts`
+- required permission class: network and environment access
+- recommended production env:
+  - `ALLOWED_ORIGINS=https://<your-pages-host>`
+  - `ALLOW_UNSAFE_DNS_FALLBACK=false`
+  - `USER_AGENT=SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)`
+
+Keep deployment tokens in GitHub secrets or the deploy provider. Do not commit
+tokens or project credentials.
+
 ## API
 
 Inspect a public URL:
@@ -81,6 +103,8 @@ npm run lint:api
 npm run check:api
 npm run test:api
 ```
+
+CI runs the same `npm run check` command on pushes and pull requests.
 
 ## License
 

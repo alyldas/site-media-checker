@@ -40,6 +40,21 @@ describe("App media preview smoke", () => {
     expect(wrapper.findAll(".phone-island")).toHaveLength(2);
     expect(wrapper.findAll(".phone-camera-cutout")).toHaveLength(2);
   });
+
+  it("shows API errors and clears stale reports", async () => {
+    vi.mocked(inspectUrl).mockRejectedValueOnce(new Error("Invalid URL"));
+
+    const wrapper = mount(App);
+
+    await wrapper.get("input#url").setValue("not-a-url");
+    await wrapper.get("form").trigger("submit");
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Invalid URL");
+    });
+
+    expect(wrapper.find("[role='alert']").exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Media Previews");
+  });
 });
 
 const reportFixture: InspectReport = {

@@ -20,10 +20,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Deploy to Deno Deploy
-        uses: denoland/deployctl@v1
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
         with:
-          project: ${{ inputs.project }}
-          entrypoint: apps/api/main.ts
+          deno-version: v2.x
+
+      - name: Deploy to Deno Deploy
         env:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+        run: |
+          deno run -A jsr:@deno/deployctl deploy \
+            --project="${{ inputs.project }}" \
+            --entrypoint=apps/api/main.ts \
+            --prod \
+            --env="ALLOWED_ORIGINS=${ALLOWED_ORIGINS}" \
+            --env="ALLOW_UNSAFE_DNS_FALLBACK=false" \
+            --env="USER_AGENT=SiteMediaCheckerBot/1.0 (+https://github.com/alyldas/site-media-checker)"

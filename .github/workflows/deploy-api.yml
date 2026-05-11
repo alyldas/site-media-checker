@@ -30,6 +30,15 @@ jobs:
           DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
         run: |
+          deno deploy create \
+            --app="${{ inputs.project }}" \
+            --source=local \
+            --runtime-mode=dynamic \
+            --entrypoint=apps/api/main.ts \
+            --do-not-use-detected-build-config \
+            --region=global \
+            --no-wait || true
+
           deno deploy env add ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}" ||
             deno deploy env update-value ALLOWED_ORIGINS "${ALLOWED_ORIGINS}" --app="${{ inputs.project }}"
           deno deploy env add ALLOW_UNSAFE_DNS_FALLBACK "false" --app="${{ inputs.project }}" ||

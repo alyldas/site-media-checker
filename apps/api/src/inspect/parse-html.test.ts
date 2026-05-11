@@ -52,6 +52,43 @@ Deno.test("parses Open Graph and Twitter tags", () => {
   assertEquals(parsed.twitter["twitter:image"], "/twitter.png");
 });
 
+Deno.test("parses quoted attributes containing greater-than characters", () => {
+  const parsed = parseHtmlMetadata(`
+    <meta property="og:title" content="A > B">
+    <meta name="twitter:description" content='Use 2 > 1 in previews'>
+    <link rel="icon" href="/icons/a>b.svg" type="image/svg+xml">
+  `);
+
+  assertEquals(parsed.openGraph["og:title"], "A > B");
+  assertEquals(parsed.twitter["twitter:description"], "Use 2 > 1 in previews");
+  assertEquals(parsed.links[0]?.href, "/icons/a>b.svg");
+});
+
+Deno.test("decodes apostrophe and numeric HTML entities", () => {
+  const parsed = parseHtmlMetadata(`
+    <meta property="og:description" content="A &apos;quote&apos;, &#x27;hex&#x27; and &#39;decimal&#39;">
+  `);
+
+  assertEquals(
+    parsed.openGraph["og:description"],
+    "A 'quote', 'hex' and 'decimal'",
+  );
+});
+
+Deno.test("treats blank metadata content as missing", () => {
+  const parsed = parseHtmlMetadata(`
+    <title>   </title>
+    <meta name="description" content="   ">
+    <meta property="og:image" content="   ">
+    <meta name="twitter:card" content="">
+  `);
+
+  assertEquals(parsed.title, null);
+  assertEquals(parsed.description, null);
+  assertEquals(parsed.openGraph["og:image"], undefined);
+  assertEquals(parsed.twitter["twitter:card"], undefined);
+});
+
 Deno.test("parses light and dark theme colors", () => {
   const parsed = parseHtmlMetadata(`
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">

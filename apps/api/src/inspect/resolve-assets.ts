@@ -82,7 +82,7 @@ export function collectAssetCandidates(
   const twitterImage = meta.twitter["twitter:image"];
 
   if (ogImage) {
-    const resolvedUrl = resolveUrl(ogImage, finalUrl);
+    const resolvedUrl = resolveUrl(ogImage, baseUrl);
     if (resolvedUrl) {
       candidates.push({
         kind: "og-image",
@@ -94,7 +94,7 @@ export function collectAssetCandidates(
   }
 
   if (twitterImage) {
-    const resolvedUrl = resolveUrl(twitterImage, finalUrl);
+    const resolvedUrl = resolveUrl(twitterImage, baseUrl);
     if (resolvedUrl) {
       candidates.push({
         kind: "twitter-image",

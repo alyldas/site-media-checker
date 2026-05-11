@@ -86,6 +86,21 @@ defineProps<{
           <dt class="font-semibold text-stone-500">url</dt>
           <dd class="truncate">{{ asset.resolvedUrl }}</dd>
         </div>
+        <div
+          v-if="asset.error"
+          class="grid min-w-0 grid-cols-[4.75rem_minmax(0,1fr)] gap-2 text-red-700"
+        >
+          <dt class="font-semibold">error</dt>
+          <dd class="text-anywhere min-w-0">{{ asset.error }}</dd>
+        </div>
+        <div
+          v-for="warning in asset.warnings"
+          :key="warning"
+          class="grid min-w-0 grid-cols-[4.75rem_minmax(0,1fr)] gap-2 text-amber-700"
+        >
+          <dt class="font-semibold">warning</dt>
+          <dd class="text-anywhere min-w-0">{{ warning }}</dd>
+        </div>
       </dl>
     </div>
   </article>

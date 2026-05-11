@@ -12,7 +12,7 @@ export async function inspectUrl(url: string): Promise<InspectReport> {
     body: JSON.stringify({ url }),
   });
 
-  const data = (await response.json()) as unknown;
+  const data = await readJsonResponse(response);
   const apiError = errorMessage(data);
 
   if (!response.ok || apiError) {
@@ -20,6 +20,20 @@ export async function inspectUrl(url: string): Promise<InspectReport> {
   }
 
   return data as InspectReport;
+}
+
+async function readJsonResponse(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return null;
+  }
+
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 function errorMessage(data: unknown): string | null {

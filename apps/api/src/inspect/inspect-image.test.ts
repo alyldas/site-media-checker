@@ -1,5 +1,5 @@
 import { assertEquals } from "@std/assert";
-import { inspectImage } from "./inspect-image.ts";
+import { inspectImage, isRecognizedImage } from "./inspect-image.ts";
 
 Deno.test("parses PNG dimensions", () => {
   const png = new Uint8Array([
@@ -36,6 +36,16 @@ Deno.test("parses PNG dimensions", () => {
   });
 });
 
+Deno.test("marks unknown bytes as unrecognized image data", () => {
+  const image = inspectImage(
+    new TextEncoder().encode("<html></html>"),
+    "text/html",
+  );
+
+  assertEquals(image.format, "unknown");
+  assertEquals(isRecognizedImage(image), false);
+});
+
 Deno.test("parses SVG viewBox dimensions", () => {
   const svg = new TextEncoder().encode(`<svg viewBox="0 0 1200 630"></svg>`);
 
@@ -43,6 +53,69 @@ Deno.test("parses SVG viewBox dimensions", () => {
     format: "svg",
     width: 1200,
     height: 630,
+  });
+});
+
+Deno.test("parses SVG viewBox dimensions with comma separators", () => {
+  const svg = new TextEncoder().encode(`<svg viewBox="0,0,1200,630"></svg>`);
+
+  assertEquals(inspectImage(svg, "image/svg+xml"), {
+    format: "svg",
+    width: 1200,
+    height: 630,
+  });
+});
+
+Deno.test("uses SVG viewBox when width and height are percentages", () => {
+  const svg = new TextEncoder().encode(
+    `<svg width="100%" height="100%" viewBox="0 0 1200 630"></svg>`,
+  );
+
+  assertEquals(inspectImage(svg, "image/svg+xml"), {
+    format: "svg",
+    width: 1200,
+    height: 630,
+  });
+});
+
+Deno.test("parses lossy WebP dimensions", () => {
+  const webp = new Uint8Array([
+    0x52,
+    0x49,
+    0x46,
+    0x46,
+    0x1e,
+    0x00,
+    0x00,
+    0x00,
+    0x57,
+    0x45,
+    0x42,
+    0x50,
+    0x56,
+    0x50,
+    0x38,
+    0x20,
+    0x12,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x9d,
+    0x01,
+    0x2a,
+    0x80,
+    0x02,
+    0x68,
+    0x01,
+  ]);
+
+  assertEquals(inspectImage(webp, "image/webp"), {
+    format: "webp",
+    width: 640,
+    height: 360,
   });
 });
 

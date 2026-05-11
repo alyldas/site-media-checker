@@ -1,6 +1,17 @@
 import type { ApiConfig } from "../utils/config.ts";
+import type { ErrorCode } from "../../../../packages/core/src/types.ts";
 import { headersToRecord } from "../utils/headers.ts";
-import { assertPublicHttpUrl } from "../security/ssrf.ts";
+import { assertPublicHttpUrl, SsrfError } from "../security/ssrf.ts";
+
+export class SafeFetchError extends Error {
+  constructor(
+    public readonly code: ErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "SafeFetchError";
+  }
+}
 
 export interface SafeFetchOptions {
   timeoutMs: number;
@@ -63,43 +74,81 @@ export async function safeFetch(
           "user-agent": options.userAgent,
         },
       });
+
+      const location = response.headers.get("location");
+      if (isRedirect(response.status) && location) {
+        if (index === options.maxRedirects) {
+          throw new SafeFetchError("too_many_redirects", "Too many redirects");
+        }
+
+        const nextUrl = new URL(location, currentUrl).toString();
+        await assertPublicHttpUrl(nextUrl, config);
+        redirects.push({
+          from: currentUrl,
+          to: nextUrl,
+          status: response.status,
+        });
+        currentUrl = nextUrl;
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type");
+      assertAllowedContentType(contentType, options.allowedContentTypes);
+      const body = await readLimited(response, options.maxBytes);
+
+      return {
+        url,
+        finalUrl: currentUrl,
+        status: response.status,
+        headers: headersToRecord(response.headers),
+        body,
+        contentType,
+        redirected: redirects.length > 0,
+        redirects,
+      };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new SafeFetchError("fetch_timeout", "Fetch timed out");
+      }
+
+      if (error instanceof SafeFetchError) {
+        throw error;
+      }
+
+      if (error instanceof SsrfError) {
+        throw error;
+      }
+
+      throw new SafeFetchError("fetch_failed", "Fetch failed");
     } finally {
       clearTimeout(timeout);
     }
-
-    const location = response.headers.get("location");
-    if (isRedirect(response.status) && location) {
-      if (index === options.maxRedirects) {
-        throw new Error("too_many_redirects");
-      }
-
-      const nextUrl = new URL(location, currentUrl).toString();
-      await assertPublicHttpUrl(nextUrl, config);
-      redirects.push({
-        from: currentUrl,
-        to: nextUrl,
-        status: response.status,
-      });
-      currentUrl = nextUrl;
-      continue;
-    }
-
-    const contentType = response.headers.get("content-type");
-    const body = await readLimited(response, options.maxBytes);
-
-    return {
-      url,
-      finalUrl: currentUrl,
-      status: response.status,
-      headers: headersToRecord(response.headers),
-      body,
-      contentType,
-      redirected: redirects.length > 0,
-      redirects,
-    };
   }
 
-  throw new Error("too_many_redirects");
+  throw new SafeFetchError("too_many_redirects", "Too many redirects");
+}
+
+function assertAllowedContentType(
+  contentType: string | null,
+  allowedContentTypes: string[] | undefined,
+): void {
+  if (
+    !contentType || !allowedContentTypes || allowedContentTypes.includes("*/*")
+  ) {
+    return;
+  }
+
+  const normalized = contentType.split(";")[0]?.trim().toLowerCase();
+  const allowed = allowedContentTypes.map((type) => type.toLowerCase());
+
+  if (!normalized || allowed.includes(normalized)) {
+    return;
+  }
+
+  throw new SafeFetchError(
+    "unsupported_content_type",
+    `Unsupported content type: ${contentType}`,
+  );
 }
 
 async function readLimited(
@@ -128,7 +177,7 @@ async function readLimited(
     total += value.byteLength;
     if (total > maxBytes) {
       await reader.cancel();
-      throw new Error("response_too_large");
+      throw new SafeFetchError("response_too_large", "Response is too large");
     }
 
     chunks.push(value);

@@ -63,6 +63,7 @@ const {
   previewInitial,
   pwaIconAsset,
   twitterDescription,
+  twitterHandle,
   twitterImageAsset,
   twitterTitle,
 } = usePreviewData(report, inputUrl);
@@ -192,7 +193,8 @@ async function submitInspection() {
             v-model="inputUrl"
             class="min-h-12 min-w-0 rounded-md border border-stone-200 px-4 text-base outline-none transition focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-100"
             placeholder="Enter website URL"
-            type="url"
+            type="text"
+            inputmode="url"
             autocomplete="url"
             :aria-invalid="Boolean(errorMessage)"
             :aria-busy="isLoading"
@@ -403,6 +405,7 @@ async function submitInspection() {
                 :page-host="pageHost"
                 :page-title="pageTitle"
                 :twitter-description="twitterDescription"
+                :twitter-handle="twitterHandle"
                 :twitter-image-asset="twitterImageAsset"
                 :twitter-title="twitterTitle"
               />

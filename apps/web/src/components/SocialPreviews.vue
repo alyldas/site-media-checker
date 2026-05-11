@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import {
   AtSign,
   MessageCircle,
@@ -9,7 +10,7 @@ import {
 import type { PreviewAsset } from "../lib/preview";
 import PreviewImageSlot from "./PreviewImageSlot.vue";
 
-defineProps<{
+const props = defineProps<{
   card: string | null | undefined;
   ogDescription: string;
   ogImageAsset: PreviewAsset | null;
@@ -17,9 +18,21 @@ defineProps<{
   pageHost: string;
   pageTitle: string;
   twitterDescription: string;
+  twitterHandle: string;
   twitterImageAsset: PreviewAsset | null;
   twitterTitle: string;
 }>();
+
+const ogImageMissingText = computed(() =>
+  props.ogImageAsset
+    ? "Open Graph image invalid or unreachable"
+    : "Open Graph image missing"
+);
+const twitterImageMissingText = computed(() =>
+  props.twitterImageAsset
+    ? "Twitter/X image invalid or unreachable"
+    : "Twitter/X image missing"
+);
 </script>
 
 <template>
@@ -57,7 +70,7 @@ defineProps<{
           <div class="min-w-0">
             <div class="flex min-w-0 items-center gap-1 text-sm">
               <span class="truncate font-semibold">{{ pageTitle }}</span>
-              <span class="shrink-0 text-stone-500">@{{ pageHost }}</span>
+              <span class="shrink-0 text-stone-500">@{{ twitterHandle }}</span>
             </div>
             <p
               class="text-anywhere mt-1 line-clamp-2 text-sm leading-5 text-stone-100"
@@ -69,7 +82,7 @@ defineProps<{
             >
               <PreviewImageSlot
                 :asset="twitterImageAsset"
-                missing-text="Twitter/X image missing"
+                :missing-text="twitterImageMissingText"
               />
             </div>
             <h3
@@ -113,7 +126,7 @@ defineProps<{
         <div class="mt-3 aspect-[1.91/1] overflow-hidden rounded-md bg-white">
           <PreviewImageSlot
             :asset="ogImageAsset"
-            missing-text="Open Graph image missing"
+            :missing-text="ogImageMissingText"
           />
         </div>
         <p class="mt-3 truncate text-xs uppercase text-stone-500">
@@ -140,7 +153,7 @@ defineProps<{
         <div class="aspect-[1.91/1] overflow-hidden rounded-lg bg-white">
           <PreviewImageSlot
             :asset="ogImageAsset"
-            missing-text="Open Graph image missing"
+            :missing-text="ogImageMissingText"
           />
         </div>
         <div class="mt-3 border-l-4 border-sky-400 pl-3">
@@ -183,7 +196,7 @@ defineProps<{
         <div class="mt-3 aspect-[1.91/1] overflow-hidden rounded-xl bg-white">
           <PreviewImageSlot
             :asset="ogImageAsset"
-            missing-text="Open Graph image missing"
+            :missing-text="ogImageMissingText"
           />
         </div>
         <h3

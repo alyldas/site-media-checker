@@ -33,7 +33,14 @@ export async function buildInspectReport(
       inspectAsset(candidate, config, `asset-${index + 1}`)
     ),
   );
-  const checks = buildChecks(pageMeta, assets, manifest);
+  const isHttps = pageFetch.finalUrl.startsWith("https://");
+  const checks = buildChecks(
+    pageMeta,
+    assets,
+    manifest,
+    pageFetch.status,
+    isHttps,
+  );
 
   return {
     version: "1.0.0",
@@ -53,7 +60,7 @@ export async function buildInspectReport(
       lang: pageMeta.lang,
       baseHref: pageMeta.baseHref,
       htmlBytes: pageFetch.body.byteLength,
-      isHttps: pageFetch.finalUrl.startsWith("https://"),
+      isHttps,
     },
     icons: assets,
     manifest,
@@ -107,7 +114,8 @@ function buildSocialReport(
   const twitterImage = pageMeta.twitter["twitter:image"];
   const ogTitle = pageMeta.openGraph["og:title"];
   const ogDescription = pageMeta.openGraph["og:description"];
-  const ogImage = pageMeta.openGraph["og:image"];
+  const ogImage = pageMeta.openGraph["og:image:secure_url"] ??
+    pageMeta.openGraph["og:image:url"] ?? pageMeta.openGraph["og:image"];
 
   return {
     openGraph: {

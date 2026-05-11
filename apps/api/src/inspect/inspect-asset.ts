@@ -3,8 +3,8 @@ import type {
   IconAsset,
   IconUsage,
 } from "../../../../packages/core/src/types.ts";
-import { safeFetch } from "./fetch-page.ts";
-import { inspectImage } from "./inspect-image.ts";
+import { safeFetch, SafeFetchError } from "./fetch-page.ts";
+import { inspectImage, isRecognizedImage } from "./inspect-image.ts";
 import type { AssetCandidate } from "./resolve-assets.ts";
 
 type InspectableAssetKind = Exclude<AssetCandidate["kind"], "manifest">;
@@ -34,11 +34,13 @@ export async function inspectAsset(
         "image/svg+xml",
         "image/x-icon",
         "image/vnd.microsoft.icon",
-        "*/*",
+        "application/octet-stream",
       ],
     });
     const image = inspectImage(result.body, result.contentType);
     const warnings = image.warning ? [image.warning] : [];
+    const ok = result.status >= 200 && result.status < 300 &&
+      isRecognizedImage(image);
 
     return {
       id,
@@ -48,7 +50,7 @@ export async function inspectAsset(
       declaredUrl: candidate.declaredUrl,
       resolvedUrl: candidate.resolvedUrl,
       status: result.status,
-      ok: result.status >= 200 && result.status < 300,
+      ok,
       declaredType: candidate.declaredType ?? null,
       actualType: result.contentType,
       declaredSizes: candidate.declaredSizes ?? null,
@@ -73,7 +75,7 @@ export async function inspectAsset(
       resolvedUrl: candidate.resolvedUrl,
       status: null,
       ok: false,
-      error: error instanceof Error ? error.message : "Asset inspection failed",
+      error: publicInspectionError(error, "Asset inspection failed"),
       declaredType: candidate.declaredType ?? null,
       declaredSizes: candidate.declaredSizes ?? null,
       declaredMedia: candidate.declaredMedia ?? null,
@@ -81,6 +83,10 @@ export async function inspectAsset(
       warnings: [],
     };
   }
+}
+
+function publicInspectionError(error: unknown, fallback: string): string {
+  return error instanceof SafeFetchError ? error.message : fallback;
 }
 
 function usageForKind(kind: InspectableAssetKind): IconUsage[] {

@@ -219,5 +219,6 @@ export type ErrorCode =
   | "response_too_large"
   | "request_too_large"
   | "too_many_redirects"
+  | "unsupported_content_type"
   | "invalid_json"
   | "internal_error";

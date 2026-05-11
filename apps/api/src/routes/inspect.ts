@@ -6,6 +6,7 @@ import { errorResponse } from "../utils/error-response.ts";
 import { normalizeInputUrl, UrlValidationError } from "../utils/url.ts";
 import { assertPublicHttpUrl, SsrfError } from "../security/ssrf.ts";
 import { buildInspectReport } from "../inspect/build-report.ts";
+import { SafeFetchError } from "../inspect/fetch-page.ts";
 
 const inspectBodySchema = z.object({
   url: z.string().trim().min(1).max(2048),
@@ -37,9 +38,9 @@ inspectRoute.post("/", async (c) => {
     );
   }
 
-  const text = await c.req.text();
+  const text = await readRequestTextLimited(c.req.raw, config.maxRequestBytes);
 
-  if (new TextEncoder().encode(text).byteLength > config.maxRequestBytes) {
+  if (text === null) {
     return c.json(
       errorResponse("request_too_large", "Request body is too large"),
       413,
@@ -83,13 +84,72 @@ async function inspect(inputUrl: string, c: Context) {
       await buildInspectReport(inputUrl, normalizedUrl, config, startedAt),
     );
   } catch (error) {
-    if (error instanceof UrlValidationError || error instanceof SsrfError) {
+    if (
+      error instanceof UrlValidationError || error instanceof SsrfError ||
+      error instanceof SafeFetchError
+    ) {
       return c.json(
         errorResponse(error.code, error.message),
-        400,
+        statusForErrorCode(error.code),
       );
     }
 
     throw error;
   }
+}
+
+function statusForErrorCode(code: string): 400 | 408 | 413 | 502 | 504 {
+  switch (code) {
+    case "fetch_timeout":
+      return 504;
+    case "response_too_large":
+    case "html_too_large":
+      return 413;
+    case "fetch_failed":
+      return 502;
+    default:
+      return 400;
+  }
+}
+
+async function readRequestTextLimited(
+  request: Request,
+  maxBytes: number,
+): Promise<string | null> {
+  if (!request.body) {
+    return "";
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    if (!value) {
+      continue;
+    }
+
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(body);
 }

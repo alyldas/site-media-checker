@@ -6,6 +6,10 @@ export interface ImageMetadata {
   warning?: string;
 }
 
+export function isRecognizedImage(image: ImageMetadata): boolean {
+  return image.format !== "unknown";
+}
+
 const decoder = new TextDecoder();
 
 export function inspectImage(
@@ -116,6 +120,17 @@ function inspectWebp(bytes: Uint8Array): ImageMetadata | null {
     };
   }
 
+  if (
+    chunk === "VP8 " && bytes[23] === 0x9d && bytes[24] === 0x01 &&
+    bytes[25] === 0x2a
+  ) {
+    return {
+      format: "webp",
+      width: readUint16Le(bytes, 26) & 0x3fff,
+      height: readUint16Le(bytes, 28) & 0x3fff,
+    };
+  }
+
   return null;
 }
 
@@ -159,23 +174,30 @@ function inspectSvg(
     return null;
   }
 
-  const width = parseNumberAttribute(text.match(/\bwidth=["']?([\d.]+)/i)?.[1]);
-  const height = parseNumberAttribute(
-    text.match(/\bheight=["']?([\d.]+)/i)?.[1],
+  const width = parseNumberAttribute(
+    text.match(/\bwidth\s*=\s*["']?([^"'\s>]+)/i)?.[1],
   );
-  const viewBox = text.match(/\bviewBox=["']?([\d.\s-]+)/i)?.[1]?.trim().split(
-    /\s+/,
-  ).map(Number);
+  const height = parseNumberAttribute(
+    text.match(/\bheight\s*=\s*["']?([^"'\s>]+)/i)?.[1],
+  );
+  const viewBox = text.match(/\bviewBox\s*=\s*["']([^"']+)["']/i)?.[1]?.trim()
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map(Number)
+    .filter(Number.isFinite);
+
+  const viewBoxWidth = viewBox?.length === 4 ? viewBox[2] ?? null : null;
+  const viewBoxHeight = viewBox?.length === 4 ? viewBox[3] ?? null : null;
 
   return {
     format: "svg",
-    width: width ?? (viewBox?.length === 4 ? viewBox[2] ?? null : null),
-    height: height ?? (viewBox?.length === 4 ? viewBox[3] ?? null : null),
+    width: width ?? viewBoxWidth,
+    height: height ?? viewBoxHeight,
   };
 }
 
 function parseNumberAttribute(value: string | undefined): number | null {
-  if (!value) {
+  if (!value || /%$/.test(value.trim())) {
     return null;
   }
 

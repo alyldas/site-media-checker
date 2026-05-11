@@ -55,6 +55,22 @@ describe("App media preview smoke", () => {
     expect(wrapper.find("[role='alert']").exists()).toBe(true);
     expect(wrapper.text()).not.toContain("Media Previews");
   });
+
+  it("submits hostname-only input so the API can normalize it", async () => {
+    vi.mocked(inspectUrl).mockResolvedValueOnce(reportFixture);
+
+    const wrapper = mount(App);
+    const input = wrapper.get<HTMLInputElement>("input#url");
+
+    expect(input.element.type).toBe("text");
+    expect(input.attributes("inputmode")).toBe("url");
+
+    await input.setValue("example.com");
+    await wrapper.get("form").trigger("submit");
+    await vi.waitFor(() => {
+      expect(inspectUrl).toHaveBeenCalledWith("example.com");
+    });
+  });
 });
 
 const reportFixture: InspectReport = {

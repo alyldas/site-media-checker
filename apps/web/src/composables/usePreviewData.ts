@@ -92,13 +92,14 @@ export function usePreviewData(
 
   const appleIconAsset = computed(
     () =>
-      findAsset(["apple-touch-icon"]) ??
+      findImageAsset(["apple-touch-icon"]) ??
       findManifestIcon(["180x180", "167x167", "152x152"]),
   );
 
   const pwaIconAsset = computed(
     () =>
-      findAsset(["manifest-icon"]) ?? findManifestIcon(["512x512", "192x192"]),
+      findImageAsset(["manifest-icon"]) ??
+      findManifestIcon(["512x512", "192x192"]),
   );
 
   const ogImageAsset = computed(
@@ -124,9 +125,22 @@ export function usePreviewData(
   const twitterDescription = computed(
     () => report.value?.social.twitter.description ?? ogDescription.value,
   );
+  const twitterHandle = computed(() =>
+    normalizeSocialHandle(
+      report.value?.social.twitter.site ??
+        report.value?.social.twitter.creator ??
+        pageHost.value,
+    )
+  );
 
   function findAsset(kinds: string[]): PreviewAsset | null {
     return findPreviewAsset(report.value?.icons ?? [], kinds);
+  }
+
+  function findImageAsset(kinds: string[]): PreviewAsset | null {
+    return (report.value?.icons ?? []).find((asset) =>
+      kinds.includes(asset.kind) && isImageAsset(asset)
+    ) ?? null;
   }
 
   function findIconVariant(scheme: "light" | "dark"): PreviewAsset | null {
@@ -160,7 +174,12 @@ export function usePreviewData(
     previewInitial,
     pwaIconAsset,
     twitterDescription,
+    twitterHandle,
     twitterImageAsset,
     twitterTitle,
   };
+}
+
+function normalizeSocialHandle(value: string): string {
+  return value.trim().replace(/^@+/, "") || "website";
 }

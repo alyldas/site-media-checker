@@ -5,8 +5,8 @@ import type {
 } from "../../../../packages/core/src/types.ts";
 import type { ApiConfig } from "../utils/config.ts";
 import { resolveUrl } from "../utils/url.ts";
-import { safeFetch } from "./fetch-page.ts";
-import { inspectImage } from "./inspect-image.ts";
+import { safeFetch, SafeFetchError } from "./fetch-page.ts";
+import { inspectImage, isRecognizedImage } from "./inspect-image.ts";
 
 export type ManifestInspection = ManifestReport;
 
@@ -31,13 +31,37 @@ export async function inspectManifest(
       userAgent: config.userAgent,
       allowedContentTypes: [
         "application/manifest+json",
+        "application/x-web-app-manifest+json",
         "application/json",
         "text/json",
-        "*/*",
       ],
     });
     const text = new TextDecoder().decode(result.body);
-    const raw = JSON.parse(text) as Record<string, unknown>;
+    let parsed: unknown;
+
+    try {
+      parsed = JSON.parse(text) as unknown;
+    } catch {
+      return failedManifestInspection(
+        declaredUrl,
+        resolvedUrl,
+        "Manifest is not valid JSON",
+        result.status,
+        result.contentType,
+      );
+    }
+
+    if (!isManifestObject(parsed)) {
+      return failedManifestInspection(
+        declaredUrl,
+        resolvedUrl,
+        "Manifest JSON must be an object",
+        result.status,
+        result.contentType,
+      );
+    }
+
+    const raw = parsed;
     const iconLinks = Array.isArray(raw.icons)
       ? raw.icons.flatMap((icon) =>
         normalizeManifestIcon(icon, result.finalUrl)
@@ -66,35 +90,19 @@ export async function inspectManifest(
         hasStartUrl: typeof raw.start_url === "string" &&
           raw.start_url.length > 0,
         hasDisplay: typeof raw.display === "string" && raw.display.length > 0,
-        has192Icon: iconLinks.some((icon) => hasDeclaredSize(icon.sizes, 192)),
-        has512Icon: iconLinks.some((icon) => hasDeclaredSize(icon.sizes, 512)),
-        hasMaskableIcon: iconLinks.some((icon) =>
-          icon.purpose?.split(/\s+/).includes("maskable")
+        has192Icon: icons.some((icon) => icon.ok && hasIconSize(icon, 192)),
+        has512Icon: icons.some((icon) => icon.ok && hasIconSize(icon, 512)),
+        hasMaskableIcon: icons.some((icon) =>
+          icon.ok && icon.purpose?.split(/\s+/).includes("maskable")
         ),
       },
     };
   } catch (error) {
-    return {
+    return failedManifestInspection(
       declaredUrl,
       resolvedUrl,
-      status: null,
-      ok: false,
-      error: error instanceof Error
-        ? error.message
-        : "Manifest inspection failed",
-      validJson: false,
-      fields: {},
-      icons: [],
-      capabilities: {
-        hasName: false,
-        hasShortName: false,
-        hasStartUrl: false,
-        hasDisplay: false,
-        has192Icon: false,
-        has512Icon: false,
-        hasMaskableIcon: false,
-      },
-    };
+      publicInspectionError(error, "Manifest inspection failed"),
+    );
   }
 }
 
@@ -118,10 +126,12 @@ async function inspectManifestIcon(
         "image/svg+xml",
         "image/x-icon",
         "image/vnd.microsoft.icon",
-        "*/*",
+        "application/octet-stream",
       ],
     });
     const image = inspectImage(result.body, result.contentType);
+    const ok = result.status >= 200 && result.status < 300 &&
+      isRecognizedImage(image);
 
     return {
       id,
@@ -130,7 +140,7 @@ async function inspectManifestIcon(
       declaredUrl: icon.src,
       resolvedUrl: icon.resolvedUrl,
       status: result.status,
-      ok: result.status >= 200 && result.status < 300,
+      ok,
       declaredType: icon.type ?? null,
       actualType: result.contentType,
       declaredSizes: icon.sizes ?? null,
@@ -154,7 +164,7 @@ async function inspectManifestIcon(
       resolvedUrl: icon.resolvedUrl,
       status: null,
       ok: false,
-      error: error instanceof Error ? error.message : "Asset inspection failed",
+      error: publicInspectionError(error, "Asset inspection failed"),
       declaredType: icon.type ?? null,
       declaredSizes: icon.sizes ?? null,
       purpose: icon.purpose ?? null,
@@ -162,6 +172,43 @@ async function inspectManifestIcon(
       warnings: [],
     };
   }
+}
+
+function failedManifestInspection(
+  declaredUrl: string,
+  resolvedUrl: string,
+  error: string,
+  status: number | null = null,
+  contentType: string | null = null,
+): ManifestInspection {
+  return {
+    declaredUrl,
+    resolvedUrl,
+    status,
+    ok: false,
+    error,
+    contentType,
+    validJson: false,
+    fields: {},
+    icons: [],
+    capabilities: {
+      hasName: false,
+      hasShortName: false,
+      hasStartUrl: false,
+      hasDisplay: false,
+      has192Icon: false,
+      has512Icon: false,
+      hasMaskableIcon: false,
+    },
+  };
+}
+
+function publicInspectionError(error: unknown, fallback: string): string {
+  return error instanceof SafeFetchError ? error.message : fallback;
+}
+
+function isManifestObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeManifestIcon(
@@ -235,4 +282,18 @@ function manifestIconUsage(purpose: string | undefined): IconUsage[] {
 function hasDeclaredSize(sizes: string | undefined, size: number): boolean {
   return sizes?.split(/\s+/).some((entry) => entry === `${size}x${size}`) ??
     false;
+}
+
+function hasIconSize(icon: IconAsset, size: number): boolean {
+  if (icon.width === size && icon.height === size) {
+    return true;
+  }
+
+  if (
+    icon.sizes?.some((entry) => entry.width === size && entry.height === size)
+  ) {
+    return true;
+  }
+
+  return hasDeclaredSize(icon.declaredSizes ?? undefined, size);
 }

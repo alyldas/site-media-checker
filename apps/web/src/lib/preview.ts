@@ -167,13 +167,23 @@ export function findManifestIcon(
   icons: PreviewAsset[],
   preferredSizes: string[],
 ): PreviewAsset | null {
+  const imageIcons = icons.filter(isImageAsset);
+
   return (
-    icons.find((icon) =>
-      preferredSizes.some((size) => formatSizes(icon.sizes)?.includes(size)),
+    imageIcons.find((icon) =>
+      preferredSizes.some((size) => hasExactSize(icon, size))
     ) ??
-    icons.find((icon) => Boolean(icon.resolvedUrl)) ??
+    imageIcons.find((icon) => Boolean(icon.resolvedUrl)) ??
     null
   );
+}
+
+function hasExactSize(icon: PreviewAsset, size: string): boolean {
+  const declared = icon.declaredSizes?.split(/\s+/) ?? [];
+  const detected = icon.sizes?.map((entry) => `${entry.width}x${entry.height}`) ??
+    [];
+
+  return [...declared, ...detected].includes(size);
 }
 
 export function compareFaviconAssets(

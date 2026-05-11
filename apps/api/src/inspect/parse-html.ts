@@ -25,25 +25,25 @@ export interface ParsedLink {
 }
 
 export function parseHtmlMetadata(html: string): ParsedHtmlMetadata {
-  const links = [...html.matchAll(/<link\b([^>]*)>/gi)]
-    .map((match) => parseAttributes(match[1] ?? ""))
-    .filter((attrs) => attrs.rel && attrs.href)
+  const links = findTagAttributeText(html, "link")
+    .map((attributes) => parseAttributes(attributes))
+    .filter((attrs) => normalizeText(attrs.rel) && normalizeText(attrs.href))
     .map((attrs) => ({
-      rel: attrs.rel,
-      href: attrs.href,
-      type: attrs.type ?? null,
-      sizes: attrs.sizes ?? null,
-      media: attrs.media ?? null,
+      rel: normalizeText(attrs.rel) ?? "",
+      href: normalizeText(attrs.href) ?? "",
+      type: normalizeText(attrs.type),
+      sizes: normalizeText(attrs.sizes),
+      media: normalizeText(attrs.media),
     }));
 
-  const metas = [...html.matchAll(/<meta\b([^>]*)>/gi)].map((match) =>
-    parseAttributes(match[1] ?? "")
+  const metas = findTagAttributeText(html, "meta").map((attributes) =>
+    parseAttributes(attributes)
   );
   const openGraph: Record<string, string> = {};
   const twitter: Record<string, string> = {};
 
   for (const attrs of metas) {
-    const content = attrs.content;
+    const content = normalizeText(attrs.content);
 
     if (!content) {
       continue;
@@ -62,8 +62,9 @@ export function parseHtmlMetadata(html: string): ParsedHtmlMetadata {
   }
 
   return {
-    lang: parseAttributes(html.match(/<html\b([^>]*)>/i)?.[1] ?? "").lang ??
-      null,
+    lang: normalizeText(
+      parseAttributes(findTagAttributeText(html, "html")[0] ?? "").lang,
+    ),
     title: decodeHtml(
       html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() ?? "",
     ) || null,
@@ -72,13 +73,59 @@ export function parseHtmlMetadata(html: string): ParsedHtmlMetadata {
     themeColors: findThemeColors(metas),
     canonical: links.find((link) => hasRelToken(link.rel, "canonical"))?.href ??
       null,
-    baseHref: [...html.matchAll(/<base\b([^>]*)>/gi)]
-      .map((match) => parseAttributes(match[1] ?? ""))
-      .find((attrs) => attrs.href)?.href ?? null,
+    baseHref: normalizeText(
+      findTagAttributeText(html, "base")
+        .map((attributes) => parseAttributes(attributes))
+        .find((attrs) => attrs.href)?.href,
+    ),
     links,
     openGraph,
     twitter,
   };
+}
+
+function findTagAttributeText(html: string, tagName: string): string[] {
+  const results: string[] = [];
+  const pattern = new RegExp(`<${tagName}\\b`, "gi");
+
+  for (const match of html.matchAll(pattern)) {
+    const start = match.index + match[0].length;
+    const end = findTagEnd(html, start);
+
+    if (end === -1) {
+      continue;
+    }
+
+    results.push(html.slice(start, end));
+  }
+
+  return results;
+}
+
+function findTagEnd(html: string, start: number): number {
+  let quote: '"' | "'" | null = null;
+
+  for (let index = start; index < html.length; index += 1) {
+    const char = html[index];
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+
+    if (char === ">") {
+      return index;
+    }
+  }
+
+  return -1;
 }
 
 export function hasRelToken(rel: string, token: string): boolean {
@@ -96,8 +143,8 @@ function findThemeColors(
       attrs.name?.toLowerCase() === "theme-color" && Boolean(attrs.content)
     )
     .map((attrs) => ({
-      content: attrs.content,
-      media: attrs.media ?? null,
+      content: normalizeText(attrs.content) ?? "",
+      media: normalizeText(attrs.media),
     }));
 }
 
@@ -106,8 +153,9 @@ function findMeta(
   key: "name" | "property",
   value: string,
 ): string | null {
-  return metas.find((attrs) => attrs[key]?.toLowerCase() === value)?.content ??
-    null;
+  return normalizeText(
+    metas.find((attrs) => attrs[key]?.toLowerCase() === value)?.content,
+  );
 }
 
 function parseAttributes(input: string): Record<string, string> {
@@ -130,9 +178,21 @@ function parseAttributes(input: string): Record<string, string> {
 
 function decodeHtml(value: string): string {
   return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16))
+    )
+    .replace(/&#(\d+);/g, (_, decimal: string) =>
+      String.fromCodePoint(Number.parseInt(decimal, 10))
+    )
     .replaceAll("&amp;", "&")
     .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
     .replaceAll("&#39;", "'")
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">");
+}
+
+function normalizeText(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
 }

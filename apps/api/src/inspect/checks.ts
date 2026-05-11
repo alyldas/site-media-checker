@@ -2,6 +2,7 @@ import type {
   Check,
   CheckCategory,
 } from "../../../../packages/core/src/types.ts";
+import { RULE_IDS } from "../../../../packages/core/src/rules.ts";
 import type { InspectedAsset } from "./inspect-asset.ts";
 import type { ManifestInspection } from "./inspect-manifest.ts";
 import type { ParsedHtmlMetadata } from "./parse-html.ts";
@@ -10,6 +11,8 @@ export function buildChecks(
   page: ParsedHtmlMetadata,
   assets: InspectedAsset[],
   manifest: ManifestInspection | null,
+  status: number | null,
+  isHttps = true,
 ): Check[] {
   const checks: Check[] = [];
   const faviconAssets = assets.filter((asset) =>
@@ -19,22 +22,63 @@ export function buildChecks(
     asset.kind === "apple-touch-icon"
   );
   const ogImageAssets = assets.filter((asset) => asset.kind === "og-image");
+  const twitterImageAssets = assets.filter((asset) =>
+    asset.kind === "twitter-image"
+  );
+  const pageReachable = status !== null && status >= 200 && status < 300;
 
   checks.push(
+    pageReachable
+      ? ok(
+        RULE_IDS.pageReachable,
+        "Page reachable",
+        "Page returned a 2xx response.",
+        "page",
+      )
+      : errorCheck(
+        RULE_IDS.pageReachable,
+        "Page reachable",
+        status === null
+          ? "Page could not be fetched."
+          : `Page returned HTTP ${status}.`,
+        "page",
+      ),
+  );
+  checks.push(
+    isHttps
+      ? ok(
+        RULE_IDS.pageHttps,
+        "HTTPS",
+        "Page was fetched over HTTPS.",
+        "security",
+      )
+      : warning(
+        RULE_IDS.pageHttps,
+        "HTTPS",
+        "Page was fetched over insecure HTTP.",
+        "security",
+      ),
+  );
+  checks.push(
     page.title
-      ? ok("page.title", "Page title", "Page has a title.", "page")
-      : warning("page.title", "Page title", "Page is missing a title.", "page"),
+      ? ok(RULE_IDS.pageTitle, "Page title", "Page has a title.", "page")
+      : warning(
+        RULE_IDS.pageTitle,
+        "Page title",
+        "Page is missing a title.",
+        "page",
+      ),
   );
   checks.push(
     page.description
       ? ok(
-        "page.description",
+        RULE_IDS.pageDescription,
         "Meta description",
         "Page has a meta description.",
         "page",
       )
       : warning(
-        "page.description",
+        RULE_IDS.pageDescription,
         "Meta description",
         "Page is missing a meta description.",
         "page",
@@ -43,13 +87,13 @@ export function buildChecks(
   checks.push(
     faviconAssets.some((asset) => asset.ok)
       ? ok(
-        "favicon.reachable",
+        RULE_IDS.faviconReachable,
         "Favicon",
         "At least one favicon is reachable.",
         "favicon",
       )
       : warning(
-        "favicon.reachable",
+        RULE_IDS.faviconReachable,
         "Favicon",
         "No reachable favicon was detected.",
         "favicon",
@@ -58,28 +102,28 @@ export function buildChecks(
   checks.push(
     appleAssets.some((asset) => asset.ok)
       ? ok(
-        "apple.touch-icon",
+        RULE_IDS.appleTouchIcon,
         "Apple Touch Icon",
         "Apple Touch Icon is reachable.",
         "apple",
       )
       : warning(
-        "apple.touch-icon",
+        RULE_IDS.appleTouchIcon,
         "Apple Touch Icon",
         "Apple Touch Icon is missing or unreachable.",
         "apple",
       ),
   );
   checks.push(
-    manifest?.validJson
+    manifest?.ok && manifest.validJson
       ? ok(
-        "manifest.valid-json",
+        RULE_IDS.manifestValid,
         "Web App Manifest",
         "Manifest JSON is valid.",
         "manifest",
       )
       : warning(
-        "manifest.valid-json",
+        RULE_IDS.manifestValid,
         "Web App Manifest",
         "No valid manifest was detected.",
         "manifest",
@@ -90,13 +134,13 @@ export function buildChecks(
     checks.push(
       manifest.capabilities.has192Icon
         ? ok(
-          "pwa.icon-192",
+          RULE_IDS.pwaIcon192,
           "PWA 192 icon",
           "Manifest declares a 192x192 icon.",
           "pwa",
         )
         : warning(
-          "pwa.icon-192",
+          RULE_IDS.pwaIcon192,
           "PWA 192 icon",
           "Manifest does not declare a 192x192 icon.",
           "pwa",
@@ -105,13 +149,13 @@ export function buildChecks(
     checks.push(
       manifest.capabilities.has512Icon
         ? ok(
-          "pwa.icon-512",
+          RULE_IDS.pwaIcon512,
           "PWA 512 icon",
           "Manifest declares a 512x512 icon.",
           "pwa",
         )
         : warning(
-          "pwa.icon-512",
+          RULE_IDS.pwaIcon512,
           "PWA 512 icon",
           "Manifest does not declare a 512x512 icon.",
           "pwa",
@@ -120,13 +164,13 @@ export function buildChecks(
     checks.push(
       manifest.capabilities.hasMaskableIcon
         ? ok(
-          "pwa.maskable-icon",
+          RULE_IDS.pwaMaskableIcon,
           "Maskable icon",
           "Manifest declares a maskable icon.",
           "pwa",
         )
         : warning(
-          "pwa.maskable-icon",
+          RULE_IDS.pwaMaskableIcon,
           "Maskable icon",
           "Manifest does not declare a maskable icon.",
           "pwa",
@@ -138,13 +182,13 @@ export function buildChecks(
     page.openGraph["og:image"] || page.openGraph["og:image:url"] ||
       page.openGraph["og:image:secure_url"]
       ? ok(
-        "social.og-image",
+        RULE_IDS.openGraphImage,
         "Open Graph image",
         "Open Graph image is declared.",
         "social",
       )
       : warning(
-        "social.og-image",
+        RULE_IDS.openGraphImage,
         "Open Graph image",
         "Open Graph image is missing.",
         "social",
@@ -153,13 +197,21 @@ export function buildChecks(
   checks.push(
     ogImageAssets.some((asset) => asset.ok)
       ? ok(
-        "social.og-image.reachable",
+        RULE_IDS.openGraphImageReachable,
         "Open Graph image reachable",
         "Open Graph image is reachable.",
         "social",
       )
+      : page.openGraph["og:image"] || page.openGraph["og:image:url"] ||
+          page.openGraph["og:image:secure_url"]
+      ? warning(
+        RULE_IDS.openGraphImageReachable,
+        "Open Graph image reachable",
+        "Open Graph image is declared but was not fetched as a valid image.",
+        "social",
+      )
       : info(
-        "social.og-image.reachable",
+        RULE_IDS.openGraphImageReachable,
         "Open Graph image reachable",
         "No reachable Open Graph image was inspected.",
         "social",
@@ -168,26 +220,43 @@ export function buildChecks(
   checks.push(
     page.twitter["twitter:card"]
       ? ok(
-        "twitter.card",
+        RULE_IDS.twitterCard,
         "Twitter/X Card",
         "Twitter/X Card is declared.",
         "twitter",
       )
       : warning(
-        "twitter.card",
+        RULE_IDS.twitterCard,
         "Twitter/X Card",
         "Twitter/X Card is missing.",
         "twitter",
       ),
   );
+  if (page.twitter["twitter:image"]) {
+    checks.push(
+      twitterImageAssets.some((asset) => asset.ok)
+        ? ok(
+          RULE_IDS.twitterImageReachable,
+          "Twitter/X image reachable",
+          "Twitter/X image was fetched as a valid image.",
+          "twitter",
+        )
+        : warning(
+          RULE_IDS.twitterImageReachable,
+          "Twitter/X image reachable",
+          "Twitter/X image is declared but was not fetched as a valid image.",
+          "twitter",
+        ),
+    );
+  }
 
   for (const asset of assets) {
-    if (!asset.ok && asset.source === "html-link") {
+    if (!asset.ok && asset.source !== "default-path") {
       checks.push(
         errorCheck(
           `${asset.kind}.asset.${asset.id}`,
           "Declared asset unreachable",
-          "A declared asset could not be fetched.",
+          "A declared asset could not be fetched as a valid image.",
           categoryForAssetKind(asset.kind),
           asset.resolvedUrl,
         ),
@@ -230,7 +299,7 @@ function errorCheck(
   title: string,
   message: string,
   category: CheckCategory,
-  target: string,
+  target?: string,
 ): Check {
   return { id, title, severity: "error", message, category, target };
 }

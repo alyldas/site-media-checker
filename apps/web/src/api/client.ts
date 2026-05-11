@@ -1,7 +1,7 @@
 import type { ErrorResponse, InspectReport } from "@site-media-checker/core";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8787";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8787";
 
 export async function inspectUrl(url: string): Promise<InspectReport> {
   const response = await fetch(`${API_BASE_URL}/inspect`, {

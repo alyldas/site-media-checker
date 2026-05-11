@@ -29,6 +29,10 @@ The API is a Deno/Hono app with this entrypoint:
 apps/api/main.ts
 ```
 
+Manual GitHub Actions deployment is configured in
+`.github/workflows/deploy-api.yml`. Add `DENO_DEPLOY_TOKEN` as a repository
+secret, then run the workflow with the Deno Deploy project name.
+
 Recommended Deno Deploy settings:
 
 ```txt

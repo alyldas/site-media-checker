@@ -113,7 +113,7 @@
   display: grid;
   grid-template-columns: auto minmax(7rem, 12rem) auto 1fr;
   align-items: center;
-  gap: 0.36rem;
+  column-gap: 0.56rem;
   min-height: 2.42rem;
   background: #dbeafe;
   padding: 0.3rem 0.62rem;
@@ -152,7 +152,7 @@
   display: grid;
   grid-template-columns: auto minmax(7rem, 14rem) 1fr;
   align-items: center;
-  gap: 0.56rem;
+  column-gap: 0.76rem;
   min-height: 2.42rem;
   background: #f4f4f5;
   padding: 0.3rem 0.62rem;
@@ -248,7 +248,7 @@
   display: grid;
   grid-template-columns: auto minmax(7rem, 13rem) auto 1fr;
   align-items: center;
-  gap: 0.36rem;
+  column-gap: 0.56rem;
   min-height: 2.42rem;
   background: #e5e7eb;
   padding: 0.3rem 0.62rem;

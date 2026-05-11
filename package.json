@@ -38,6 +38,6 @@
   "devDependencies": {
     "deno-bin": "^2.2.7",
     "prettier": "^3.3.3",
-    "typescript": "^5.6.3"
+    "typescript": "^6.0.3"
   }
 }

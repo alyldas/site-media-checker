@@ -1,0 +1,29 @@
+name: Deploy API
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Deno Deploy project name
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: ${{ inputs.project }}
+          entrypoint: apps/api/main.ts
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
